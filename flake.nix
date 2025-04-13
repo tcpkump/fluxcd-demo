@@ -18,6 +18,7 @@
         devShells.default = pkgs.mkShell {
           packages = [
             pkgs.fluxcd
+            pkgs.just
             pkgs.k9s
             pkgs.kubectl
             pkgs.kubernetes-helm

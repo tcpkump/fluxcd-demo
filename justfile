@@ -7,13 +7,13 @@ minikube_container_runtime := "containerd"
 minikube_addons := "ingress"
 
 # GitOps repository info
-git_url := "ssh://git@gitea.imkumpy.in:kumpy/fluxcd-demo.git"
+git_url := "ssh://git@gitea.imkumpy.in/kumpy/fluxcd-demo.git"
 git_branch := "main"
 git_path := "clusters/minikube"
 
 # Start minikube with standard config
 start:
-    echo "🚀 Starting Minikube..."
+    echo "Starting Minikube..."
     minikube start \
       --cpus={{minikube_cpus}} \
       --memory={{minikube_memory}} \
@@ -24,7 +24,7 @@ start:
 
 # Bootstrap FluxCD into Minikube
 bootstrap:
-    echo "📦 Bootstrapping FluxCD..."
+    echo "Bootstrapping FluxCD..."
     flux bootstrap git \
       --url={{git_url}} \
       --branch={{git_branch}} \
@@ -33,21 +33,11 @@ bootstrap:
 
 # Wipe Minikube and Flux state (use with caution)
 clean:
-    echo "🧹 Cleaning up Minikube and Flux state..."
+    echo "Cleaning up Minikube and Flux state..."
     minikube delete --all --purge
     rm -rf ~/.flux
     rm -f ~/.kube/config
-    echo "✅ Cleaned."
-
-# Reset kube context to minikube after deletion
-context:
-    echo "🔁 Resetting kubectl context..."
-    minikube update-context
+    echo "Cleaned."
 
 # Run full clean + bootstrap workflow
-rebuild: clean start bootstrap context
-
-# Port-forward Grafana (adjust as needed)
-grafana:
-    kubectl -n monitoring port-forward svc/kube-prometheus-stack-grafana 3000:80
-
+rebuild: clean start bootstrap
