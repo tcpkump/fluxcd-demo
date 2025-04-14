@@ -10,6 +10,7 @@ minikube_addons := "ingress metallb"
 git_url := "ssh://git@gitea.imkumpy.in/kumpy/fluxcd-demo.git"
 git_branch := "main"
 git_path := "clusters/minikube"
+ssh_private_key_file := x"~/.ssh/id_rsa"
 
 # Start minikube with standard config
 start:
@@ -33,6 +34,7 @@ bootstrap:
       --url={{git_url}} \
       --branch={{git_branch}} \
       --path={{git_path}} \
+      --private-key-file={{ssh_private_key_file}} \
       --components-extra=image-reflector-controller,image-automation-controller
 
 # Wipe Minikube and Flux state (use with caution)

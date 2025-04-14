@@ -1,4 +1,9 @@
 ---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cert-manager
+---
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: HelmRepository
 metadata:
@@ -23,8 +28,6 @@ spec:
         kind: HelmRepository
         name: jetstack
         namespace: cert-manager
-  install:
-    createNamespace: true
   values:
     crds:
       enabled: true
