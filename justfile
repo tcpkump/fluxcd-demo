@@ -1,10 +1,10 @@
 # Minikube configuration
 minikube_cpus := "4"
 minikube_memory := "8192"
-minikube_k8s_version := "v1.29.0"
+minikube_k8s_version := "v1.31.0"
 minikube_driver := "docker"
 minikube_container_runtime := "containerd"
-minikube_addons := "ingress"
+minikube_addons := "ingress metallb"
 
 # GitOps repository info
 git_url := "ssh://git@gitea.imkumpy.in/kumpy/fluxcd-demo.git"
@@ -21,6 +21,10 @@ start:
       --driver={{minikube_driver}} \
       --container-runtime={{minikube_container_runtime}} \
       --addons={{minikube_addons}}
+
+stop:
+    echo "Stopping Minikube..."
+    minikube stop
 
 # Bootstrap FluxCD into Minikube
 bootstrap:
