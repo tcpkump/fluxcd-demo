@@ -4,7 +4,7 @@ minikube_memory := "8192"
 minikube_k8s_version := "v1.31.0"
 minikube_driver := "docker"
 minikube_container_runtime := "containerd"
-minikube_addons := "ingress metallb"
+minikube_addons := "metallb"
 
 # GitOps repository info
 git_url := "ssh://git@gitea.imkumpy.in/kumpy/fluxcd-demo.git"

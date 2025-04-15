@@ -10,7 +10,7 @@ metadata:
   name: jetstack
   namespace: cert-manager
 spec:
-  interval: 5m0s
+  interval: 24h
   url: https://charts.jetstack.io
 ---
 apiVersion: helm.toolkit.fluxcd.io/v2
@@ -19,15 +19,15 @@ metadata:
   name: cert-manager
   namespace: cert-manager
 spec:
-  interval: 5m
+  interval: 30m
   chart:
     spec:
       chart: cert-manager
-      version: v1.17.0
+      version: "1.x"
       sourceRef:
         kind: HelmRepository
         name: jetstack
         namespace: cert-manager
+      interval: 12h
   values:
-    crds:
-      enabled: true
+    installCRDs: true
