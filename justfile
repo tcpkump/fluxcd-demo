@@ -21,7 +21,8 @@ start:
       --kubernetes-version={{minikube_k8s_version}} \
       --driver={{minikube_driver}} \
       --container-runtime={{minikube_container_runtime}} \
-      --addons={{minikube_addons}}
+      --addons={{minikube_addons}} \
+      --silent
 
 stop:
     echo "Stopping Minikube..."
