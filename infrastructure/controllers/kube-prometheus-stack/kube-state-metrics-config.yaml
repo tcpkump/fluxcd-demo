@@ -1,4 +1,6 @@
-# prometheus:
+prometheus:
+  prometheusSpec:
+    podMonitorSelectorNilUsesHelmValues: false
 #   ingress: true
 #   ingressClassName: nginx
 #   hosts:

@@ -30,8 +30,8 @@ spec:
     role: "Stateless-Aggregator"
     podMonitor:
       enabled: true
-      additionalLabels:
-        release: kube-prom-stack
+      # additionalLabels:
+      #   release: kube-prom-stack
     customConfig:
       data_dir: /vector-data-dir
       api:
