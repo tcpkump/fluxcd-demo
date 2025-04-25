@@ -48,11 +48,17 @@ spec:
           encoding: json
           path: /
           method: POST
+      transforms:
+        vector_metrics_limit_cardinality:
+          type: tag_cardinality_limit
+          inputs:
+            - vector_metrics
+          mode: exact
       sinks:
         prom-exporter:
           type: prometheus_exporter
           inputs:
-            - vector_metrics
+            - vector_metrics_limit_cardinality
           address: 0.0.0.0:9598
         broken_kafka:
           type: kafka
