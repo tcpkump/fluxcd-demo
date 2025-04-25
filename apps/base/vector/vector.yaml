@@ -39,17 +39,23 @@ spec:
         address: 127.0.0.1:8686
         playground: false
       sources:
-        vector-agents:
+        prometheus_metrics:
+          type: internal_metrics
+        vector_agents:
           address: 0.0.0.0:6000
           type: http_server
           encoding: json
           path: /
           method: POST
       sinks:
+        prometheus_exporter:
+          type: prometheus_exporter
+          inputs:
+            - prometheus_metrics
         broken_kafka:
           type: kafka
           inputs:
-            - vector-agents
+            - vector_agents
           tls:
             enabled: true
           encoding:
