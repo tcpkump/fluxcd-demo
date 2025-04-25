@@ -1,3 +1,11 @@
+# prometheus:
+#   ingress: true
+#   ingressClassName: nginx
+#   hosts:
+#     - prometheus.example.com
+#   paths:
+#     - /
+#   pathType: ImplementationSpecific
 kube-state-metrics:
   # For kube-prometheus-stacks that are already installed and configured with
   # custom collectors, commenting out the collectors and extraArgs below will
