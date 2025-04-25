@@ -59,6 +59,7 @@ spec:
         podMonitorSelector:
           matchLabels:
             app.kubernetes.io/component: monitoring
+            release: kube-prom-stack
     grafana:
       defaultDashboardsEnabled: false
       adminPassword: flux

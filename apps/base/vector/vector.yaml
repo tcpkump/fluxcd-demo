@@ -31,7 +31,7 @@ spec:
     podMonitor:
       enabled: true
       additionalLabels:
-        app.kubernetes.io/component: monitoring
+        release: kube-prom-stack
     customConfig:
       data_dir: /vector-data-dir
       api:
