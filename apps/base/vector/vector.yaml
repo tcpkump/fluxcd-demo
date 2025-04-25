@@ -54,6 +54,14 @@ spec:
           inputs:
             - vector_metrics
           mode: exact
+        filter_vector_metrics:
+          type: filter
+          inputs:
+            - vector_metrics
+          condition: |
+            match(.name, r'^vector_kafka_queue_messages') ||
+            match(.name, r'^vector_kafka_produced_messages_total')
+          # (match(.name, r'^vector_component_received_event_bytes_total') && .tags.component_id == "my_app_logs")
       sinks:
         prom-exporter:
           type: prometheus_exporter
