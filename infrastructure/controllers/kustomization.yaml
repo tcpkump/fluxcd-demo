@@ -3,3 +3,14 @@ kind: Kustomization
 resources:
   - cert-manager.yaml
   - ingress-nginx.yaml
+  - kube-prometheus-stack.yaml
+configMapGenerator:
+  - name: flux-kube-state-metrics-config
+    files:
+      - kube-state-metrics-config.yaml
+    options:
+      labels:
+        app.kubernetes.io/part-of: flux
+        app.kubernetes.io/component: monitoring
+configurations:
+  - kustomizeconfig.yaml
