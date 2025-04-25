@@ -39,7 +39,7 @@ spec:
         address: 127.0.0.1:8686
         playground: false
       sources:
-        prometheus_metrics:
+        vector_metrics:
           type: internal_metrics
           scrape_interval_secs: 10
         vector_agents:
@@ -49,10 +49,10 @@ spec:
           path: /
           method: POST
       sinks:
-        prometheus_exporter:
+        prom-exporter:
           type: prometheus_exporter
           inputs:
-            - prometheus_metrics
+            - vector_metrics
           address: 0.0.0.0:9598
         broken_kafka:
           type: kafka
