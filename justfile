@@ -1,6 +1,6 @@
 # Minikube configuration
 minikube_cpus := "4"
-minikube_memory := "8192"
+minikube_memory := "4096"
 minikube_k8s_version := "v1.31.0"
 minikube_driver := "docker"
 minikube_container_runtime := "containerd"
@@ -10,7 +10,7 @@ minikube_addons := "metallb"
 git_url := "ssh://git@gitea.imkumpy.in/kumpy/fluxcd-demo.git"
 git_branch := "main"
 git_path := "clusters/minikube"
-ssh_private_key_file := x"~/.ssh/id_rsa"
+ssh_private_key_file := x"~/.ssh/mbp_personal"
 
 # Start minikube with standard config
 start:
@@ -22,7 +22,7 @@ start:
       --driver={{minikube_driver}} \
       --container-runtime={{minikube_container_runtime}} \
       --addons={{minikube_addons}} \
-      --silent
+      --interactive=false
 
 stop:
     echo "Stopping Minikube..."
@@ -36,7 +36,8 @@ bootstrap:
       --branch={{git_branch}} \
       --path={{git_path}} \
       --private-key-file={{ssh_private_key_file}} \
-      --components-extra=image-reflector-controller,image-automation-controller
+      --components-extra=image-reflector-controller,image-automation-controller \
+      --silent
 
 # Wipe Minikube and Flux state (use with caution)
 clean:
