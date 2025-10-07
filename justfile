@@ -1,14 +1,14 @@
 # Minikube configuration
 minikube_cpus := "4"
 minikube_memory := "4096"
-minikube_k8s_version := "v1.31.0"
+minikube_k8s_version := "v1.33.0"
 minikube_driver := "docker"
 minikube_container_runtime := "containerd"
 minikube_addons := "metallb"
 
 # GitOps repository info
 git_url := "ssh://git@gitea.imkumpy.in/kumpy/fluxcd-demo.git"
-git_branch := "main"
+git_branch := "vector-service"
 git_path := "clusters/minikube"
 ssh_private_key_file := x"~/.ssh/mbp_personal"
 
@@ -23,7 +23,14 @@ start:
       --container-runtime={{minikube_container_runtime}} \
       --addons={{minikube_addons}} \
       --interactive=false
+    @just configure-metallb
+
+configure-metallb:
+    #!/usr/bin/env bash
+    set -euo pipefail
     echo "Configuring MetalLB IP pool..."
+    MINIKUBE_IP=$(minikube ip)
+    IP_BASE=$(echo $MINIKUBE_IP | sed 's/\.[0-9]*$//')
     kubectl apply -f - <<EOF
     apiVersion: v1
     kind: ConfigMap
@@ -36,9 +43,10 @@ start:
         - name: default
           protocol: layer2
           addresses:
-          - $(minikube ip | sed 's/\.[0-9]*$/.100/')-$(minikube ip | sed 's/\.[0-9]*$/.110/')
+          - ${IP_BASE}.100-${IP_BASE}.110
     EOF
 
+# Stop minikube
 stop:
     echo "Stopping Minikube..."
     minikube stop
