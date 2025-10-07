@@ -131,7 +131,7 @@ spec:
         shareProcessNamespace: true # Allows cert-reloader below to send signals to Vector
         extraContainers:
           - name: cert-reloader
-            image: "{{ $.Values.apps.pullThroughCache.registry }}/{{ $.Values.apps.pullThroughCache.paths.docker }}/busybox"
+            image: "busybox"
             command:
               - /bin/sh
               - -c

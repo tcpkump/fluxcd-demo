@@ -10,7 +10,7 @@ minikube_addons := "metallb"
 git_url := "ssh://git@gitea.imkumpy.in/kumpy/fluxcd-demo.git"
 git_branch := "vector-service"
 git_path := "clusters/minikube"
-ssh_private_key_file := x"~/.ssh/mbp_personal"
+ssh_private_key_file := x"~/.ssh/id_rsa"
 
 # Start minikube with standard config
 start:
