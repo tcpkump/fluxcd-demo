@@ -23,6 +23,21 @@ start:
       --container-runtime={{minikube_container_runtime}} \
       --addons={{minikube_addons}} \
       --interactive=false
+    echo "Configuring MetalLB IP pool..."
+    kubectl apply -f - <<EOF
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      namespace: metallb-system
+      name: config
+    data:
+      config: |
+        address-pools:
+        - name: default
+          protocol: layer2
+          addresses:
+          - $(minikube ip | sed 's/\.[0-9]*$/.100/')-$(minikube ip | sed 's/\.[0-9]*$/.110/')
+    EOF
 
 stop:
     echo "Stopping Minikube..."

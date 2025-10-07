@@ -13,6 +13,29 @@ spec:
   interval: 24h
   url: https://helm.vector.dev
 ---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: vector-aggregator-tls
+  namespace: vector
+  labels:
+    app.kubernetes.io/component: Stateless-Aggregator
+    app.kubernetes.io/instance: vector-aggregator
+    app.kubernetes.io/name: vector
+spec:
+  secretName: vector-aggregator-tls
+  duration: 2160h0m0s # 90 days, matching your current config
+  renewBefore: 360h0m0s # 15 days, matching your current config
+  issuerRef:
+    name: letsencrypt-cluster-issuer
+    kind: ClusterIssuer
+    group: cert-manager.io
+  dnsNames:
+    - vector-aggregator.example.com
+  usages:
+    - digital signature
+    - key encipherment
+---
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
@@ -33,6 +56,14 @@ spec:
       enabled: true
       additionalLabels:
         release: kube-prom-stack
+    extraVolumes:
+      - name: tls-certs
+        secret:
+          secretName: vector-aggregator-tls
+    extraVolumeMounts:
+      - name: tls-certs
+        mountPath: /etc/vector/certs
+        readOnly: true
     customConfig:
       data_dir: /vector-data-dir
       api:
@@ -49,6 +80,10 @@ spec:
           encoding: json
           path: /
           method: POST
+          tls:
+            enabled: true
+            crt_file: /etc/vector/certs/tls.crt
+            key_file: /etc/vector/certs/tls.key
       transforms:
         vector_metrics_limit_cardinality:
           type: tag_cardinality_limit
@@ -84,3 +119,41 @@ spec:
             mechanism: SCRAM-SHA-512
             username: "fake"
             password: "fake"
+      service:
+        enabled: true
+        type: "LoadBalancer"
+        # annotations left out in local development
+        ports:
+          - name: vector-tls
+            port: 443
+            protocol: TCP
+            targetPort: 6000
+        shareProcessNamespace: true # Allows cert-reloader below to send signals to Vector
+        extraContainers:
+          - name: cert-reloader
+            image: "{{ $.Values.apps.pullThroughCache.registry }}/{{ $.Values.apps.pullThroughCache.paths.docker }}/busybox"
+            command:
+              - /bin/sh
+              - -c
+              - |
+                apk add --no-cache inotify-tools procps
+                echo "Certificate watcher started"
+                while true; do
+                  inotifywait -e modify,create,moved_to /etc/vector/certs/ 2>/dev/null
+                  echo "Certificate change detected at $(date)"
+                  sleep 2  # Brief pause to ensure file write is complete
+                  VECTOR_PID=$(pgrep -f "vector" | head -1)
+                  if [ -n "$VECTOR_PID" ]; then
+                    echo "Sending SIGHUP to Vector (PID: $VECTOR_PID)"
+                    kill -HUP $VECTOR_PID
+                    echo "Reload signal sent, cooling down for 30s"
+                    sleep 30
+                  else
+                    echo "Warning: Could not find Vector process"
+                    sleep 5
+                  fi
+                done
+            volumeMounts:
+              - name: tls-certs
+                mountPath: /etc/vector/certs
+                readOnly: true
