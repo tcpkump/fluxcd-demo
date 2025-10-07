@@ -1,0 +1,442 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: dns-system
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: bind9-config
+  namespace: dns-system
+data:
+  named.conf: |
+    options {
+        directory "/var/cache/bind";
+        
+        # Security settings
+        recursion yes;
+        allow-recursion { 
+            localhost;
+            10.0.0.0/8;
+            172.16.0.0/12;
+            192.168.0.0/16;
+        };
+        
+        # Allow queries from internal networks
+        allow-query {
+            localhost;
+            10.0.0.0/8;
+            172.16.0.0/12;
+            192.168.0.0/16;
+        };
+        
+        # Forwarders for external resolution
+        forwarders {
+            8.8.8.8;
+            8.8.4.4;
+            1.1.1.1;
+        };
+        forward only;
+        
+        # Performance tuning
+        max-cache-size 256M;
+        max-cache-ttl 3600;
+        max-ncache-ttl 3600;
+        
+        # IPv4 only for simplicity (adjust if needed)
+        listen-on { any; };
+        listen-on-v6 { none; };
+        
+        # DNS security
+        dnssec-validation auto;
+        
+        # Logging
+        querylog yes;
+    };
+    
+    # Logging configuration
+    logging {
+        channel default_log {
+            file "/var/log/named/default.log" versions 3 size 10m;
+            severity info;
+            print-time yes;
+            print-severity yes;
+            print-category yes;
+        };
+        
+        channel query_log {
+            file "/var/log/named/query.log" versions 3 size 10m;
+            severity info;
+            print-time yes;
+        };
+        
+        category default { default_log; };
+        category queries { query_log; };
+    };
+    
+    # Include zone configurations
+    include "/etc/bind/named.conf.local";
+    
+  named.conf.local: |
+    zone "imkumpy.in" {
+        type master;
+        file "/etc/bind/zones/db.imkumpy.in";
+        allow-transfer { 
+            10.0.0.0/8;
+            172.16.0.0/12;
+            192.168.0.0/16;
+        };
+        notify yes;
+    };
+    
+    # Reverse lookup zone for 192.168.0.0/24
+    zone "0.168.192.in-addr.arpa" {
+        type master;
+        file "/etc/bind/zones/db.192.168.1";
+        allow-transfer { 
+            10.0.0.0/8;
+            172.16.0.0/12;
+            192.168.0.0/16;
+        };
+        notify yes;
+    };
+    
+  db.imkumpy.in: |
+    $TTL    604800
+    @       IN      SOA     ns1.imkumpy.in. admin.imkumpy.in. (
+                            2024010101      ; Serial (YYYYMMDDNN)
+                            3600            ; Refresh
+                            1800            ; Retry
+                            604800          ; Expire
+                            86400 )         ; Negative Cache TTL
+    ;
+    ; Name servers
+    @       IN      NS      ns1.imkumpy.in.
+    @       IN      NS      ns2.imkumpy.in.
+    
+    ; A records for name servers (use your actual IPs)
+    ns1     IN      A       192.168.1.10
+    ns2     IN      A       192.168.1.11
+    
+    ; Core infrastructure
+    @       IN      A       192.168.1.100   ; Root domain
+    www     IN      A       192.168.1.100   ; Web server
+    mail    IN      A       192.168.1.101   ; Mail server
+    
+    ; Kubernetes services (examples)
+    k8s-api IN      A       192.168.1.200   ; K8s API server
+    ingress IN      A       192.168.1.201   ; Ingress controller
+    
+    ; Application services
+    app1    IN      A       192.168.1.110
+    app2    IN      A       192.168.1.111
+    db      IN      A       192.168.1.120
+    cache   IN      A       192.168.1.121
+    
+    ; CNAME records (aliases)
+    blog    IN      CNAME   www.imkumpy.in.
+    api     IN      CNAME   app1.imkumpy.in.
+    cdn     IN      CNAME   www.imkumpy.in.
+    jenkins IN      CNAME   app2.imkumpy.in.
+    grafana IN      CNAME   app2.imkumpy.in.
+    
+    ; Wildcard for dynamic services
+    *.apps  IN      A       192.168.1.201   ; Points to ingress
+    *.dev   IN      A       192.168.1.202   ; Development environment
+    
+    ; MX records for mail
+    @       IN      MX      10 mail.imkumpy.in.
+    
+    ; TXT records
+    @       IN      TXT     "v=spf1 mx a ~all"
+    _dmarc  IN      TXT     "v=DMARC1; p=none; rua=mailto:admin@imkumpy.in"
+    
+  db.192.168.1: |
+    $TTL    604800
+    @       IN      SOA     ns1.imkumpy.in. admin.imkumpy.in. (
+                            2024010101      ; Serial
+                            3600            ; Refresh
+                            1800            ; Retry
+                            604800          ; Expire
+                            86400 )         ; Negative Cache TTL
+    ;
+    @       IN      NS      ns1.imkumpy.in.
+    @       IN      NS      ns2.imkumpy.in.
+    
+    ; PTR records for reverse lookup
+    10      IN      PTR     ns1.imkumpy.in.
+    11      IN      PTR     ns2.imkumpy.in.
+    100     IN      PTR     www.imkumpy.in.
+    101     IN      PTR     mail.imkumpy.in.
+    110     IN      PTR     app1.imkumpy.in.
+    111     IN      PTR     app2.imkumpy.in.
+    120     IN      PTR     db.imkumpy.in.
+    121     IN      PTR     cache.imkumpy.in.
+    200     IN      PTR     k8s-api.imkumpy.in.
+    201     IN      PTR     ingress.imkumpy.in.
+---
+# PersistentVolume for logs (optional, for production logging)
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: bind9-logs
+  namespace: dns-system
+spec:
+  accessModes:
+    - ReadWriteMany  # Use ReadWriteOnce if not using shared storage
+  resources:
+    requests:
+      storage: 5Gi
+---
+# StatefulSet for BIND9 (better than Deployment for DNS)
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: bind9
+  namespace: dns-system
+spec:
+  serviceName: bind9-headless
+  replicas: 2  # HA setup with 2 replicas
+  selector:
+    matchLabels:
+      app: bind9
+  template:
+    metadata:
+      labels:
+        app: bind9
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - bind9
+              topologyKey: kubernetes.io/hostname
+      containers:
+      - name: bind9
+        image: ubuntu/bind9:9.18-22.04_beta
+        ports:
+        - containerPort: 53
+          name: dns-tcp
+          protocol: TCP
+        - containerPort: 53
+          name: dns-udp
+          protocol: UDP
+        env:
+        - name: TZ
+          value: "UTC"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        volumeMounts:
+        - name: bind9-config
+          mountPath: /etc/bind/named.conf
+          subPath: named.conf
+        - name: bind9-config
+          mountPath: /etc/bind/named.conf.local
+          subPath: named.conf.local
+        - name: bind9-zones
+          mountPath: /etc/bind/zones
+        - name: bind9-logs
+          mountPath: /var/log/named
+        - name: bind9-cache
+          mountPath: /var/cache/bind
+        livenessProbe:
+          exec:
+            command:
+            - /usr/bin/dig
+            - "@127.0.0.1"
+            - "imkumpy.in"
+            - "SOA"
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          exec:
+            command:
+            - /usr/bin/dig
+            - "@127.0.0.1"
+            - "imkumpy.in"
+            - "SOA"
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+      volumes:
+      - name: bind9-config
+        configMap:
+          name: bind9-config
+          defaultMode: 0644
+      - name: bind9-zones
+        configMap:
+          name: bind9-config
+          items:
+          - key: db.imkumpy.in
+            path: db.imkumpy.in
+          - key: db.192.168.1
+            path: db.192.168.1
+          defaultMode: 0644
+      - name: bind9-logs
+        persistentVolumeClaim:
+          claimName: bind9-logs
+      - name: bind9-cache
+        emptyDir: {}
+---
+# Headless service for StatefulSet
+apiVersion: v1
+kind: Service
+metadata:
+  name: bind9-headless
+  namespace: dns-system
+spec:
+  clusterIP: None
+  selector:
+    app: bind9
+  ports:
+  - port: 53
+    targetPort: 53
+    protocol: TCP
+    name: dns-tcp
+  - port: 53
+    targetPort: 53
+    protocol: UDP
+    name: dns-udp
+---
+# ClusterIP Service for internal access
+apiVersion: v1
+kind: Service
+metadata:
+  name: bind9-service
+  namespace: dns-system
+  labels:
+    app: bind9
+spec:
+  type: ClusterIP
+  selector:
+    app: bind9
+  ports:
+  - port: 53
+    targetPort: 53
+    protocol: TCP
+    name: dns-tcp
+  - port: 53
+    targetPort: 53
+    protocol: UDP
+    name: dns-udp
+---
+# LoadBalancer Service for external access
+apiVersion: v1
+kind: Service
+metadata:
+  name: bind9-external
+  namespace: dns-system
+  annotations:
+    # For MetalLB (if using)
+    metallb.universe.tf/loadBalancerIPs: "192.168.1.53"
+    # For cloud providers, remove the above and uncomment below if needed
+    # service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+spec:
+  type: LoadBalancer
+  selector:
+    app: bind9
+  ports:
+  - port: 53
+    targetPort: 53
+    protocol: TCP
+    name: dns-tcp
+  - port: 53
+    targetPort: 53
+    protocol: UDP
+    name: dns-udp
+  # Optional: specify loadBalancerIP if your cluster supports it
+  # loadBalancerIP: 192.168.1.53
+---
+# NetworkPolicy for security (optional but recommended)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: bind9-network-policy
+  namespace: dns-system
+spec:
+  podSelector:
+    matchLabels:
+      app: bind9
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - podSelector: {}  # Allow from all pods in cluster
+    - namespaceSelector: {}  # Allow from all namespaces
+    - ipBlock:
+        cidr: 10.0.0.0/8
+    - ipBlock:
+        cidr: 172.16.0.0/12
+    - ipBlock:
+        cidr: 192.168.0.0/16
+    ports:
+    - protocol: TCP
+      port: 53
+    - protocol: UDP
+      port: 53
+  egress:
+  - to:
+    - ipBlock:
+        cidr: 0.0.0.0/0
+    ports:
+    - protocol: TCP
+      port: 53
+    - protocol: UDP
+      port: 53
+    - protocol: TCP
+      port: 443  # For DNSSEC
+---
+# HorizontalPodAutoscaler for automatic scaling
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: bind9-hpa
+  namespace: dns-system
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: StatefulSet
+    name: bind9
+  minReplicas: 2
+  maxReplicas: 5
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+---
+# PodDisruptionBudget for high availability
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: bind9-pdb
+  namespace: dns-system
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: bind9
